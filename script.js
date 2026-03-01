@@ -1,6 +1,6 @@
 let target = null;
 let deviceHeading = 0;
-let currentLat, currentLon;
+let currentPosition = null;
 let prefecture = "";
 let city = "";
 let prefBox = null;
@@ -48,7 +48,7 @@ function bearing(lat1, lon1, lat2, lon2){
   return (Math.atan2(y,x)*180/Math.PI+360)%360;
 }
 
-// ===== 16方位変換 =====
+// ===== 16方位 =====
 function getCardinal16(deg){
   const directions = [
     "北","北北東","北東","東北東",
@@ -63,36 +63,36 @@ function getCardinal16(deg){
 // ===== 現在地取得 =====
 navigator.geolocation.getCurrentPosition(
   pos=>{
-    currentLat = pos.coords.latitude;
-    currentLon = pos.coords.longitude;
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
 
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`)
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
     .then(res=>res.json())
     .then(data=>{
-  const addr = data.address || {};
+      const addr = data.address || {};
 
-  prefecture =
-    addr.state ||
-    addr.region ||
-    addr.province ||
-    addr.county ||
-    "不明";
+      prefecture =
+        addr.state ||
+        addr.region ||
+        addr.province ||
+        addr.county ||
+        "不明";
 
-  city =
-    addr.city ||
-    addr.town ||
-    addr.village ||
-    addr.municipality ||
-    "不明";
+      city =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.municipality ||
+        "不明";
 
-  const locEl = document.getElementById("locationInfo");
-  if(locEl){
-    locEl.innerText = `${prefecture} ${city}`;
-  }
+      const locEl = document.getElementById("locationInfo");
+      if(locEl){
+        locEl.innerText = `${prefecture} ${city}`;
+      }
 
-  prefBox = data.boundingbox;
-  cityBox = data.boundingbox;
-});
+      prefBox = data.boundingbox;
+      cityBox = data.boundingbox;
+    });
   },
   err=>{
     alert("位置情報取得失敗: " + err.message);
@@ -101,6 +101,24 @@ navigator.geolocation.getCurrentPosition(
     enableHighAccuracy:true,
     timeout:10000,
     maximumAge:0
+  }
+);
+
+// ===== GPS監視（値だけ更新）=====
+navigator.geolocation.watchPosition(
+  pos=>{
+    currentPosition = {
+      lat: pos.coords.latitude,
+      lon: pos.coords.longitude
+    };
+  },
+  err=>{
+    console.log(err);
+  },
+  {
+    enableHighAccuracy:true,
+    maximumAge:0,
+    timeout:10000
   }
 );
 
@@ -125,11 +143,11 @@ function generateTarget(){
     const dy=r*Math.sin(angle);
 
     const dLat = dy/111320;
-    const dLon = dx/(111320*Math.cos(toRad(currentLat)));
+    const dLon = dx/(111320*Math.cos(toRad(currentPosition.lat)));
 
     target={
-      lat: currentLat+dLat,
-      lon: currentLon+dLon
+      lat: currentPosition.lat+dLat,
+      lon: currentPosition.lon+dLon
     };
   }
 
@@ -167,34 +185,40 @@ window.addEventListener("deviceorientationabsolute", e=>{
   }
 });
 
-// ===== ナビ更新 =====
-navigator.geolocation.watchPosition(pos=>{
-  if(!target) return;
+// ===== フレーム更新（60fps）=====
+function updateFrame(){
 
-  const lat=pos.coords.latitude;
-  const lon=pos.coords.longitude;
+  if(target && currentPosition){
 
-  const dist=distance(lat,lon,target.lat,target.lon);
-  const deg=bearing(lat,lon,target.lat,target.lon);
+    const lat = currentPosition.lat;
+    const lon = currentPosition.lon;
 
-  const distEl = document.getElementById("distance");
-  const dirEl = document.getElementById("direction");
+    const dist = distance(lat,lon,target.lat,target.lon);
+    const deg = bearing(lat,lon,target.lat,target.lon);
 
-  if(distEl) distEl.innerText = Math.floor(dist)+" m";
+    const distEl = document.getElementById("distance");
+    const dirEl = document.getElementById("direction");
 
-  if(dirEl){
-    const cardinal = getCardinal16(deg);
-    dirEl.innerText = `${deg.toFixed(1)}°（${cardinal}）`;
+    if(distEl) distEl.innerText = Math.floor(dist)+" m";
+
+    if(dirEl){
+      const cardinal = getCardinal16(deg);
+      dirEl.innerText = `${deg.toFixed(1)}°（${cardinal}）`;
+    }
+
+    let rotation=(deg-deviceHeading+360)%360;
+
+    const arrowEl = document.getElementById("arrow");
+    if(arrowEl){
+      arrowEl.style.transform =
+        `translateX(-50%) rotate(${rotation}deg)`;
+    }
   }
 
-  let rotation=(deg-deviceHeading+360)%360;
+  requestAnimationFrame(updateFrame);
+}
 
-  const arrowEl = document.getElementById("arrow");
-  if(arrowEl){
-    arrowEl.style.transform =
-      `translateX(-50%) rotate(${rotation}deg)`;
-  }
-});
+requestAnimationFrame(updateFrame);
 
 // ===== 開発者モード =====
 let devTapCount = 0;
@@ -220,6 +244,5 @@ document.addEventListener("DOMContentLoaded", ()=>{
   });
 });
 
-// 初期処理
 checkMonthReset();
 updateUsageDisplay();
