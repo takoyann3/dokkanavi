@@ -6,6 +6,26 @@ let city = "";
 let prefBox = null;
 let cityBox = null;
 
+// ===== 月5回制限 =====
+let resetData = JSON.parse(localStorage.getItem("resetData")) || {
+  month: new Date().getMonth(),
+  count: 0
+};
+
+function checkMonthReset(){
+  const now = new Date();
+  if(now.getMonth() !== resetData.month){
+    resetData.month = now.getMonth();
+    resetData.count = 0;
+    localStorage.setItem("resetData", JSON.stringify(resetData));
+  }
+}
+
+function updateUsageDisplay(){
+  document.getElementById("usageInfo").innerText =
+    `今月使用: ${resetData.count}/5`;
+}
+
 function toRad(d){ return d*Math.PI/180 }
 
 function distance(lat1, lon1, lat2, lon2){
@@ -48,6 +68,14 @@ navigator.geolocation.getCurrentPosition(pos=>{
 
 // ===== 目的地生成 =====
 function generateTarget(){
+
+  checkMonthReset();
+
+  if(resetData.count >= 5){
+    alert("今月の生成回数は5回までやで");
+    return;
+  }
+
   const mode = document.getElementById("mode").value;
 
   if(mode==="radius"){
@@ -74,6 +102,10 @@ function generateTarget(){
   if(mode==="city" && cityBox){
     target = randomInBox(cityBox);
   }
+
+  resetData.count++;
+  localStorage.setItem("resetData", JSON.stringify(resetData));
+  updateUsageDisplay();
 }
 
 function randomInBox(box){
@@ -118,3 +150,26 @@ navigator.geolocation.watchPosition(pos=>{
   document.getElementById("arrow").style.transform =
     `translateX(-50%) rotate(${rotation}deg)`;
 });
+
+// ===== 開発者モード =====
+let devTapCount = 0;
+let devTimer = null;
+
+document.getElementById("arrow").addEventListener("click", () => {
+  devTapCount++;
+
+  clearTimeout(devTimer);
+  devTimer = setTimeout(()=>{ devTapCount=0; },2000);
+
+  if(devTapCount>=5){
+    resetData.count=0;
+    localStorage.setItem("resetData", JSON.stringify(resetData));
+    updateUsageDisplay();
+    alert("開発者モード: 回数リセット");
+    devTapCount=0;
+  }
+});
+
+// 初期表示
+checkMonthReset();
+updateUsageDisplay();
