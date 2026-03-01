@@ -69,30 +69,30 @@ navigator.geolocation.getCurrentPosition(
     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`)
     .then(res=>res.json())
     .then(data=>{
-      const addr = data.address;
+  const addr = data.address || {};
 
-      prefecture =
-        addr.state ||
-        addr.province ||
-        addr.region ||
-        addr.county ||
-        "";
+  prefecture =
+    addr.state ||
+    addr.region ||
+    addr.province ||
+    addr.county ||
+    "不明";
 
-      city =
-        addr.city ||
-        addr.town ||
-        addr.village ||
-        addr.municipality ||
-        "";
+  city =
+    addr.city ||
+    addr.town ||
+    addr.village ||
+    addr.municipality ||
+    "不明";
 
-      const locEl = document.getElementById("locationInfo");
-      if(locEl){
-        locEl.innerText = prefecture + " " + city;
-      }
+  const locEl = document.getElementById("locationInfo");
+  if(locEl){
+    locEl.innerText = `${prefecture} ${city}`;
+  }
 
-      prefBox = data.boundingbox;
-      cityBox = data.boundingbox;
-    });
+  prefBox = data.boundingbox;
+  cityBox = data.boundingbox;
+});
   },
   err=>{
     alert("位置情報取得失敗: " + err.message);
