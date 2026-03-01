@@ -60,7 +60,17 @@ function getCardinal16(deg){
   return directions[index];
 }
 
-// ===== 都道府県・市区町村の正しい範囲取得 =====
+// ===== 距離表示フォーマット =====
+function formatDistance(dist){
+
+  if(dist >= 1000){
+    return (dist/1000).toFixed(1) + " km";
+  }else{
+    return Math.floor(dist) + " m";
+  }
+}
+
+// ===== 範囲取得 =====
 function fetchBoundingBox(placeName, callback){
   fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName)}`)
     .then(res=>res.json())
@@ -101,7 +111,6 @@ navigator.geolocation.getCurrentPosition(
         locEl.innerText = `${prefecture} ${city}`;
       }
 
-      // 範囲を取得
       fetchBoundingBox(prefecture, box=>{
         prefBox = box;
       });
@@ -130,9 +139,7 @@ navigator.geolocation.watchPosition(
       lon: pos.coords.longitude
     };
   },
-  err=>{
-    console.log(err);
-  },
+  err=>{ console.log(err); },
   {
     enableHighAccuracy:true,
     maximumAge:0,
@@ -217,7 +224,7 @@ function updateFrame(){
     const distEl = document.getElementById("distance");
     const dirEl = document.getElementById("direction");
 
-    if(distEl) distEl.innerText = Math.floor(dist)+" m";
+    if(distEl) distEl.innerText = formatDistance(dist);
 
     if(dirEl){
       const cardinal = getCardinal16(deg);
