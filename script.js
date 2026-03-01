@@ -128,7 +128,7 @@ function generateTarget(){
   checkMonthReset();
 
   if(resetData.count >= 5){
-    alert("今月の生成回数は5回までやで");
+    alert("今月の生成回数は5回までです");
     return;
   }
 
