@@ -60,6 +60,17 @@ function getCardinal16(deg){
   return directions[index];
 }
 
+// ===== 都道府県・市区町村の正しい範囲取得 =====
+function fetchBoundingBox(placeName, callback){
+  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName)}`)
+    .then(res=>res.json())
+    .then(data=>{
+      if(data && data.length > 0){
+        callback(data[0].boundingbox);
+      }
+    });
+}
+
 // ===== 現在地取得 =====
 navigator.geolocation.getCurrentPosition(
   pos=>{
@@ -90,8 +101,15 @@ navigator.geolocation.getCurrentPosition(
         locEl.innerText = `${prefecture} ${city}`;
       }
 
-      prefBox = data.boundingbox;
-      cityBox = data.boundingbox;
+      // 範囲を取得
+      fetchBoundingBox(prefecture, box=>{
+        prefBox = box;
+      });
+
+      fetchBoundingBox(prefecture + " " + city, box=>{
+        cityBox = box;
+      });
+
     });
   },
   err=>{
@@ -104,7 +122,7 @@ navigator.geolocation.getCurrentPosition(
   }
 );
 
-// ===== GPS監視（値だけ更新）=====
+// ===== GPS監視 =====
 navigator.geolocation.watchPosition(
   pos=>{
     currentPosition = {
@@ -128,7 +146,7 @@ function generateTarget(){
   checkMonthReset();
 
   if(resetData.count >= 5){
-    alert("今月の生成回数は5回までです");
+    alert("今月の生成回数は5回までやで");
     return;
   }
 
@@ -185,7 +203,7 @@ window.addEventListener("deviceorientationabsolute", e=>{
   }
 });
 
-// ===== フレーム更新（60fps）=====
+// ===== フレーム更新 =====
 function updateFrame(){
 
   if(target && currentPosition){
