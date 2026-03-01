@@ -22,8 +22,10 @@ function checkMonthReset(){
 }
 
 function updateUsageDisplay(){
-  document.getElementById("usageInfo").innerText =
-    `今月使用: ${resetData.count}/5`;
+  const el = document.getElementById("usageInfo");
+  if(el){
+    el.innerText = `今月使用: ${resetData.count}/5`;
+  }
 }
 
 function toRad(d){ return d*Math.PI/180 }
@@ -47,24 +49,48 @@ function bearing(lat1, lon1, lat2, lon2){
 }
 
 // ===== 現在地取得 =====
-navigator.geolocation.getCurrentPosition(pos=>{
-  currentLat = pos.coords.latitude;
-  currentLon = pos.coords.longitude;
+navigator.geolocation.getCurrentPosition(
+  pos=>{
+    currentLat = pos.coords.latitude;
+    currentLon = pos.coords.longitude;
 
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`)
-  .then(res=>res.json())
-  .then(data=>{
-    const addr = data.address;
-    prefecture = addr.state;
-    city = addr.city || addr.town || addr.village;
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`)
+    .then(res=>res.json())
+    .then(data=>{
+      const addr = data.address;
 
-    document.getElementById("locationInfo").innerText =
-      prefecture + " " + city;
+      prefecture =
+        addr.state ||
+        addr.province ||
+        addr.region ||
+        addr.county ||
+        "";
 
-    prefBox = data.boundingbox;
-    cityBox = data.boundingbox;
-  });
-});
+      city =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.municipality ||
+        "";
+
+      const locEl = document.getElementById("locationInfo");
+      if(locEl){
+        locEl.innerText = prefecture + " " + city;
+      }
+
+      prefBox = data.boundingbox;
+      cityBox = data.boundingbox;
+    });
+  },
+  err=>{
+    alert("位置情報取得失敗: " + err.message);
+  },
+  {
+    enableHighAccuracy:true,
+    timeout:10000,
+    maximumAge:0
+  }
+);
 
 // ===== 目的地生成 =====
 function generateTarget(){
@@ -139,37 +165,45 @@ navigator.geolocation.watchPosition(pos=>{
   const dist=distance(lat,lon,target.lat,target.lon);
   const deg=bearing(lat,lon,target.lat,target.lon);
 
-  document.getElementById("distance").innerText =
-    Math.floor(dist)+" m";
+  const distEl = document.getElementById("distance");
+  const dirEl = document.getElementById("direction");
 
-  document.getElementById("direction").innerText =
-    deg.toFixed(1)+"°";
+  if(distEl) distEl.innerText = Math.floor(dist)+" m";
+  if(dirEl) dirEl.innerText = deg.toFixed(1)+"°";
 
   let rotation=(deg-deviceHeading+360)%360;
 
-  document.getElementById("arrow").style.transform =
-    `translateX(-50%) rotate(${rotation}deg)`;
-});
-
-// ===== 開発者モード =====
-let devTapCount = 0;
-let devTimer = null;
-
-document.getElementById("arrow").addEventListener("click", () => {
-  devTapCount++;
-
-  clearTimeout(devTimer);
-  devTimer = setTimeout(()=>{ devTapCount=0; },2000);
-
-  if(devTapCount>=5){
-    resetData.count=0;
-    localStorage.setItem("resetData", JSON.stringify(resetData));
-    updateUsageDisplay();
-    alert("開発者モード: 回数リセット");
-    devTapCount=0;
+  const arrowEl = document.getElementById("arrow");
+  if(arrowEl){
+    arrowEl.style.transform =
+      `translateX(-50%) rotate(${rotation}deg)`;
   }
 });
 
-// 初期表示
+// ===== 開発者モード（矢印5連打で回数リセット）=====
+let devTapCount = 0;
+let devTimer = null;
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  const arrowEl = document.getElementById("arrow");
+  if(!arrowEl) return;
+
+  arrowEl.addEventListener("click", ()=>{
+    devTapCount++;
+
+    clearTimeout(devTimer);
+    devTimer = setTimeout(()=>{ devTapCount=0; },2000);
+
+    if(devTapCount>=5){
+      resetData.count=0;
+      localStorage.setItem("resetData", JSON.stringify(resetData));
+      updateUsageDisplay();
+      alert("開発者モード: 回数リセット");
+      devTapCount=0;
+    }
+  });
+});
+
+// 初期処理
 checkMonthReset();
 updateUsageDisplay();
