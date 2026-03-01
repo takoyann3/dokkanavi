@@ -88,6 +88,10 @@ navigator.geolocation.watchPosition(pos=>{
   document.getElementById("direction").innerText =
     getDirection(deg);
 
+  const rotation = deg - deviceHeading;
+document.getElementById("arrow").style.transform =
+  `translateX(-50%) rotate(${rotation}deg)`;
+  
   if(dist < 10){
     goalCount++;
     localStorage.setItem("goalCount", goalCount);
