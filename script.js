@@ -1,120 +1,46 @@
-let target = null;
-let goalCount = parseInt(localStorage.getItem("goalCount")) || 0;
-let resetData = JSON.parse(localStorage.getItem("resetData")) || {
-  month: new Date().getMonth(),
-  count: 0
-};
-
-document.getElementById("goalCount").innerText = "Goal: " + goalCount;
-updateResetInfo();
-
-function toRad(d){ return d * Math.PI/180 }
-
-function distance(lat1, lon1, lat2, lon2){
-  const R = 6371000;
-  const dLat = toRad(lat2-lat1);
-  const dLon = toRad(lon2-lon1);
-  const a = Math.sin(dLat/2)**2 +
-            Math.cos(toRad(lat1)) *
-            Math.cos(toRad(lat2)) *
-            Math.sin(dLon/2)**2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+body{
+  font-family:sans-serif;
+  text-align:center;
+  padding-top:60px;
+  transition:0.3s;
 }
 
-function bearing(lat1, lon1, lat2, lon2){
-  const y = Math.sin(toRad(lon2-lon1)) * Math.cos(toRad(lat2));
-  const x = Math.cos(toRad(lat1))*Math.sin(toRad(lat2)) -
-            Math.sin(toRad(lat1))*Math.cos(toRad(lat2))*
-            Math.cos(toRad(lon2-lon1));
-  return (Math.atan2(y,x)*180/Math.PI + 360)%360;
+.dark{
+  background:#111;
+  color:white;
 }
 
-function getDirection(deg){
-  const dirs = ["北","北東","東","南東","南","南西","西","北西"];
-  return dirs[Math.round(deg/45)%8];
+#direction{
+  font-size:40px;
+  margin:20px;
 }
 
-function generateTarget(){
-  let now = new Date();
-  if(now.getMonth() !== resetData.month){
-    resetData.month = now.getMonth();
-    resetData.count = 0;
-  }
-
-  if(resetData.count >= 3){
-    alert("今月の新規作成は3回まで");
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const radiusKm = parseFloat(document.getElementById("radius").value);
-    const r = radiusKm * 1000;
-
-    const angle = Math.random() * 2 * Math.PI;
-    const dx = r * Math.cos(angle);
-    const dy = r * Math.sin(angle);
-
-    const dLat = dy / 111320;
-    const dLon = dx / (111320 * Math.cos(toRad(pos.coords.latitude)));
-
-    target = {
-      lat: pos.coords.latitude + dLat,
-      lon: pos.coords.longitude + dLon
-    };
-
-    resetData.count++;
-    localStorage.setItem("resetData", JSON.stringify(resetData));
-    updateResetInfo();
-  });
+#distance{
+  font-size:60px;
+  font-weight:bold;
 }
 
-function updateResetInfo(){
-  document.getElementById("resetInfo").innerText =
-    "今月使用: " + resetData.count + "/3";
+.controls{
+  margin-bottom:20px;
 }
 
-navigator.geolocation.watchPosition(pos=>{
-  if(!target) return;
-
-  const lat = pos.coords.latitude;
-  const lon = pos.coords.longitude;
-
-  const dist = distance(lat,lon,target.lat,target.lon);
-  const deg = bearing(lat,lon,target.lat,target.lon);
-
-  document.getElementById("distance").innerText =
-    Math.floor(dist) + " m";
-  document.getElementById("direction").innerText =
-    getDirection(deg);
-
-  const rotation = deg - deviceHeading;
-document.getElementById("arrow").style.transform =
-  `translateX(-50%) rotate(${rotation}deg)`;
-  
-  if(dist < 10){
-    goalCount++;
-    localStorage.setItem("goalCount", goalCount);
-    document.getElementById("goalCount").innerText =
-      "Goal: " + goalCount;
-    generateTarget();
-  }
-});
-
-function toggleTheme(){
-  document.body.classList.toggle("dark");
+#arrowContainer{
+  width:150px;
+  height:150px;
+  margin:20px auto;
+  position:relative;
 }
 
-let deviceHeading = 0;
-
-window.addEventListener("deviceorientationabsolute", e=>{
-  if(e.alpha !== null){
-    deviceHeading = e.alpha;
-  }
-});
-
-window.addEventListener("deviceorientation", e=>{
-  if(e.alpha !== null){
-    deviceHeading = e.alpha;
-  }
-});
+#arrow{
+  width:0;
+  height:0;
+  border-left:25px solid transparent;
+  border-right:25px solid transparent;
+  border-bottom:70px solid red;
+  position:absolute;
+  top:20px;
+  left:50%;
+  transform:translateX(-50%) rotate(0deg);
+  transform-origin:50% 80%;
+  transition:0.1s linear;
+}
