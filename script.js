@@ -5,27 +5,38 @@ let prefecture = "";
 let city = "";
 let prefBox = null;
 let cityBox = null;
+let arrived = false;
 
-// ===== 月5回制限 =====
-let resetData = JSON.parse(localStorage.getItem("resetData")) || {
+// ===== データ管理 =====
+let appData = JSON.parse(localStorage.getItem("appData")) || {
   month: new Date().getMonth(),
-  count: 0
+  generateCount: 0,
+  monthlyArriveCount: 0,
+  totalArriveCount: 0
 };
 
 function checkMonthReset(){
   const now = new Date();
-  if(now.getMonth() !== resetData.month){
-    resetData.month = now.getMonth();
-    resetData.count = 0;
-    localStorage.setItem("resetData", JSON.stringify(resetData));
+  if(now.getMonth() !== appData.month){
+    appData.month = now.getMonth();
+    appData.generateCount = 0;
+    appData.monthlyArriveCount = 0;
+    localStorage.setItem("appData", JSON.stringify(appData));
   }
 }
 
 function updateUsageDisplay(){
   const el = document.getElementById("usageInfo");
   if(el){
-    el.innerText = `今月使用: ${resetData.count}/5`;
+    el.innerText =
+      `生成: ${appData.generateCount}/5\n` +
+      `今月到着: ${appData.monthlyArriveCount}\n` +
+      `累計到着: ${appData.totalArriveCount}`;
   }
+}
+
+function saveData(){
+  localStorage.setItem("appData", JSON.stringify(appData));
 }
 
 function toRad(d){ return d*Math.PI/180 }
@@ -48,7 +59,6 @@ function bearing(lat1, lon1, lat2, lon2){
   return (Math.atan2(y,x)*180/Math.PI+360)%360;
 }
 
-// ===== 16方位 =====
 function getCardinal16(deg){
   const directions = [
     "北","北北東","北東","東北東",
@@ -60,9 +70,7 @@ function getCardinal16(deg){
   return directions[index];
 }
 
-// ===== 距離表示フォーマット =====
 function formatDistance(dist){
-
   if(dist >= 1000){
     return (dist/1000).toFixed(1) + " km";
   }else{
@@ -70,7 +78,6 @@ function formatDistance(dist){
   }
 }
 
-// ===== 範囲取得 =====
 function fetchBoundingBox(placeName, callback){
   fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(placeName)}`)
     .then(res=>res.json())
@@ -118,17 +125,12 @@ navigator.geolocation.getCurrentPosition(
       fetchBoundingBox(prefecture + " " + city, box=>{
         cityBox = box;
       });
-
     });
   },
   err=>{
     alert("位置情報取得失敗: " + err.message);
   },
-  {
-    enableHighAccuracy:true,
-    timeout:10000,
-    maximumAge:0
-  }
+  { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
 );
 
 // ===== GPS監視 =====
@@ -140,11 +142,7 @@ navigator.geolocation.watchPosition(
     };
   },
   err=>{ console.log(err); },
-  {
-    enableHighAccuracy:true,
-    maximumAge:0,
-    timeout:10000
-  }
+  { enableHighAccuracy:true, maximumAge:0, timeout:10000 }
 );
 
 // ===== 目的地生成 =====
@@ -152,7 +150,7 @@ function generateTarget(){
 
   checkMonthReset();
 
-  if(resetData.count >= 5){
+  if(appData.generateCount >= 5){
     alert("今月の生成回数は5回までやで");
     return;
   }
@@ -184,8 +182,10 @@ function generateTarget(){
     target = randomInBox(cityBox);
   }
 
-  resetData.count++;
-  localStorage.setItem("resetData", JSON.stringify(resetData));
+  arrived = false;
+
+  appData.generateCount++;
+  saveData();
   updateUsageDisplay();
 }
 
@@ -201,7 +201,6 @@ function randomInBox(box){
   };
 }
 
-// ===== コンパス =====
 window.addEventListener("deviceorientationabsolute", e=>{
   if(e.webkitCompassHeading){
     deviceHeading=e.webkitCompassHeading;
@@ -213,7 +212,7 @@ window.addEventListener("deviceorientationabsolute", e=>{
 // ===== フレーム更新 =====
 function updateFrame(){
 
-  if(target && currentPosition){
+  if(target && currentPosition && !arrived){
 
     const lat = currentPosition.lat;
     const lon = currentPosition.lon;
@@ -238,6 +237,19 @@ function updateFrame(){
       arrowEl.style.transform =
         `translateX(-50%) rotate(${rotation}deg)`;
     }
+
+    // ===== 到着判定 =====
+    if(dist <= 10){
+      arrived = true;
+      target = null;
+
+      appData.monthlyArriveCount++;
+      appData.totalArriveCount++;
+      saveData();
+      updateUsageDisplay();
+
+      alert("到着！");
+    }
   }
 
   requestAnimationFrame(updateFrame);
@@ -255,15 +267,14 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   arrowEl.addEventListener("click", ()=>{
     devTapCount++;
-
     clearTimeout(devTimer);
     devTimer = setTimeout(()=>{ devTapCount=0; },2000);
 
     if(devTapCount>=5){
-      resetData.count=0;
-      localStorage.setItem("resetData", JSON.stringify(resetData));
+      appData.generateCount=0;
+      saveData();
       updateUsageDisplay();
-      alert("開発者モード: 回数リセット");
+      alert("開発者モード: 生成回数リセット");
       devTapCount=0;
     }
   });
