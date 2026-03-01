@@ -100,3 +100,17 @@ navigator.geolocation.watchPosition(pos=>{
 function toggleTheme(){
   document.body.classList.toggle("dark");
 }
+
+let deviceHeading = 0;
+
+window.addEventListener("deviceorientationabsolute", e=>{
+  if(e.alpha !== null){
+    deviceHeading = e.alpha;
+  }
+});
+
+window.addEventListener("deviceorientation", e=>{
+  if(e.alpha !== null){
+    deviceHeading = e.alpha;
+  }
+});
