@@ -4,29 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>どっかナビ</title>
+
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
 
-<h1>どっかナビ</h1>
+<h2 id="locationInfo">取得中...</h2>
 
-<div class="controls">
-  <label>半径(km):
-    <input type="number" id="radius" value="1" min="0.1" step="0.1">
-  </label>
-  <button onclick="generateTarget()">新規作成</button>
-  <span id="resetInfo"></span>
-</div>
+<select id="mode">
+  <option value="radius">半径指定</option>
+  <option value="pref">都道府県内ランダム</option>
+  <option value="city">市区町村内ランダム</option>
+</select>
+
+<input type="number" id="radius" value="1" step="0.1"> km
+<button onclick="generateTarget()">目的地生成</button>
 
 <div id="arrowContainer">
   <div id="arrow"></div>
 </div>
 
-<div id="direction">--</div>
+<div id="direction">--°</div>
 <div id="distance">-- m</div>
-<div id="goalCount">Goal: 0</div>
-
-<button onclick="toggleTheme()">モード切替</button>
 
 <script src="script.js"></script>
 </body>
