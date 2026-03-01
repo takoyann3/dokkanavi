@@ -48,6 +48,18 @@ function bearing(lat1, lon1, lat2, lon2){
   return (Math.atan2(y,x)*180/Math.PI+360)%360;
 }
 
+// ===== 16方位変換 =====
+function getCardinal16(deg){
+  const directions = [
+    "北","北北東","北東","東北東",
+    "東","東南東","南東","南南東",
+    "南","南南西","南西","西南西",
+    "西","西北西","北西","北北西"
+  ];
+  const index = Math.round(deg / 22.5) % 16;
+  return directions[index];
+}
+
 // ===== 現在地取得 =====
 navigator.geolocation.getCurrentPosition(
   pos=>{
@@ -169,7 +181,11 @@ navigator.geolocation.watchPosition(pos=>{
   const dirEl = document.getElementById("direction");
 
   if(distEl) distEl.innerText = Math.floor(dist)+" m";
-  if(dirEl) dirEl.innerText = deg.toFixed(1)+"°";
+
+  if(dirEl){
+    const cardinal = getCardinal16(deg);
+    dirEl.innerText = `${deg.toFixed(1)}°（${cardinal}）`;
+  }
 
   let rotation=(deg-deviceHeading+360)%360;
 
@@ -180,7 +196,7 @@ navigator.geolocation.watchPosition(pos=>{
   }
 });
 
-// ===== 開発者モード（矢印5連打で回数リセット）=====
+// ===== 開発者モード =====
 let devTapCount = 0;
 let devTimer = null;
 
