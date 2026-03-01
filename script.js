@@ -122,3 +122,24 @@ navigator.geolocation.watchPosition(pos=>{
 function toggleTheme(){
   document.body.classList.toggle("dark");
 }
+
+// ===== 開発者モード（矢印5回タップで使用回数リセット） =====
+let devTapCount = 0;
+let devTapTimer = null;
+
+document.getElementById("arrow").addEventListener("click", () => {
+  devTapCount++;
+
+  clearTimeout(devTapTimer);
+  devTapTimer = setTimeout(() => {
+    devTapCount = 0;
+  }, 2000); // 2秒以内に連続タップ
+
+  if (devTapCount >= 5) {
+    resetData.count = 0;
+    localStorage.setItem("resetData", JSON.stringify(resetData));
+    updateResetInfo();
+    alert("開発者モード: 使用回数をリセットしました");
+    devTapCount = 0;
+  }
+});
